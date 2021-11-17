@@ -1,0 +1,176 @@
+<html>
+<head>
+    <title>OCI Face Verification Demo</title>
+</head>
+<body style="background: #fcfcfc; color: #222;">
+
+
+<div style="margin: auto; width: 85%; padding: 1em; text-align: center">
+    <h3>OCI Face Verification Demo</h3>
+    <p/>
+    <h4><a target="_deepface" href="https://github.com/serengil/deepface">DeepFace</a> software running on OCI IaaS</h4>
+</div>
+
+<div style="display: flex; flex-direction: column">
+
+    <div>
+        <table>
+            <thead>
+                <tr style="padding: 10px">
+                    <td colspan="2" align="center">
+                        <label for="algorithm">Face Detection Algorithm:&nbsp;</label>
+                        <select name="algorithm" id="algorithm">
+                        <option value="VGG-Face">Oxford VGG-Face</option>
+                        <option value="Facenet512">Google FaceNet</option>
+                        <option value="OpenFace">OpenFace</option>
+                        <option value="DeepFace">Facebook DeepFace</option>
+                        <option value="DeepID">DeepID</option>
+                        <option value="ArcFace">ArcFace</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr style="padding: 5px">
+                    <td style="font-size: 1.2em; text-align: center; color: blue;">
+                        <label for="img1_loader">Click HERE to select image #1:</label>
+                        <input type="file" id="img1_loader" name="img1" accept="image/*" style="display: none;" onchange="loadImage('img1', event)">
+                    </td>
+                    <td style="font-size: 1.2em; text-align: center; color: blue;">
+                        <label for="img2_loader" style="cursor: pointer;">Click HERE to select image #2:</label>
+                        <input type="file" id="img2_loader" name="img2" accept="image/*" style="display: none;" onchange="loadImage('img2', event)">
+                    </td>
+                </tr>
+            </thead>
+            <tbody id="tablebody">
+                <tr>
+                    <td align="center">
+                        <img id="img1" width="350"/>	
+                    </td>
+                    <td align="center">
+                        <img id="img2" width="350"/>	
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" align="center">
+                        <button onclick="callVerifyFunction();">Do These Images Match?</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" align="center">
+                        <div id="loaderDiv" style="display: none;"></div>
+                        <div id="resultDiv" style="display: none;"></div>
+                    </td>
+                </tr>
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
+
+<style type="text/css">
+    h2, h3, h4, h5, h6 {
+        margin: 0 0 10px;
+        font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+        font-weight: 400;
+        color: #222;
+        text-transform: none;
+    }
+
+    table, th {
+        border-collapse: collapse;
+        border: 1px solid black;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    td {
+        border: 1px solid black;
+        width: 50%;
+        align: center;
+    }
+
+    #loaderDiv {
+        border: 16px solid #f3f3f3; /* Light grey */
+        border-top: 16px solid #3498db; /* Blue */
+        border-radius: 50%;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+        }
+
+    @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    var imageMap = {};
+    var imageMatchingEndpoint = "https://o33e7uk2ztxkikhztdmhgfpn5a.apigateway.us-ashburn-1.oci.customer-oci.com/face-verifier/verify";
+
+    // load image from file on disk, display on page, and cache the base64 encoding for upload to 
+    // face verification function.  This function is called for images 1 and 2.
+    var loadImage = function(id, event) {
+        // show the spinner, hide the results
+        document.getElementById("loaderDiv").style.display = "none";
+        document.getElementById("resultDiv").style.display = "none";
+
+        // get the file data
+        var file = event.target.files[0];
+
+        // show image
+        var image = document.getElementById(id);
+        image.src = URL.createObjectURL(file);
+
+        // save base64 representation
+        var reader = new FileReader();
+        reader.onload = function () {
+            var base64String = reader.result.replace("data:", "").replace(/^.+,/, "");
+            imageMap[id] = base64String;
+            //console.log(base64String)
+        }
+        reader.readAsDataURL(file);
+    };
+
+    // Call DeepFace verifier and manage the spinner
+    var callVerifyFunction = function() {
+
+        // show the spinner, hide the results
+        document.getElementById("loaderDiv").style.display = "block";
+        document.getElementById("resultDiv").style.display = "none";
+
+        // create the payload
+        const formData = new FormData();
+        formData.append("img1", imageMap.img1);
+        formData.append("img2", imageMap.img2);
+        formData.append("algorithm", document.getElementById("algorithm").options[document.getElementById("algorithm").selectedIndex].value)
+
+        const response = new XMLHttpRequest();
+        response.open("POST", imageMatchingEndpoint);
+        response.send(JSON.stringify(Object.fromEntries(formData)));
+
+        response.onload = (e) => {
+            responseObj = JSON.parse(response.response);   
+            document.getElementById("resultDiv").innerHTML = 
+                "<table><tr><td>Image Match</td><td>"+responseObj.verified+"</td></tr>" + 
+                "<tr><td>Matching Model</td><td>"+responseObj.model+"</td></tr>" +
+                "<tr><td>Similarity Metric</td><td>"+responseObj.similarity_metric+"</td></tr>" +
+                "<tr><td>Verification Threshold</td><td>"+responseObj.max_threshold_to_verify+"</td></tr>" +
+                "<tr><td>Image Distance</td><td>"+responseObj.distance+"</td></tr></tbale>";
+   
+            if (String(responseObj.verified) == "false")
+                document.getElementById("resultDiv").style.backgroundColor="#ff9999";
+            else 
+                document.getElementById("resultDiv").style.backgroundColor="#e0f0c2";
+
+            // show the results, hide the spinner
+            document.getElementById("loaderDiv").style.display = "none";
+            document.getElementById("resultDiv").style.display = "block";
+        }
+    }
+
+</script>
+
+</body>
+</html>
