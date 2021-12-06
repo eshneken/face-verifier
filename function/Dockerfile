@@ -1,23 +1,18 @@
 FROM python:3.8 as build-stage
+RUN apt-get update && apt-get install -y cmake clang
+RUN pip install --upgrade pip
+ 
+
 WORKDIR /function
 ADD requirements.txt /function/
 
 			RUN pip3 install --target /python/  --no-cache --no-cache-dir -r requirements.txt &&\
 			    rm -fr ~/.cache/pip /tmp* requirements.txt func.yaml Dockerfile .venv &&\
 			    chmod -R o+r /python
-RUN pip3 install --upgrade pip
-RUN pip3 install --target /python/  --no-cache --no-cache-dir numpy
-RUN pip3 install --target /python/  --no-cache --no-cache-dir pandas
-RUN pip3 install --target /python/  --no-cache --no-cache-dir gdown
-RUN pip3 install --target /python/  --no-cache --no-cache-dir tqdm
-RUN pip3 install --target /python/  --no-cache --no-cache-dir Pillow
-RUN pip3 install --target /python/  --no-cache --no-cache-dir opencv-python
-RUN pip3 install --target /python/  --no-cache --no-cache-dir opencv-contrib-python
-RUN pip3 install --target /python/  --no-cache --no-cache-dir tensorflow==1.9.0
-RUN pip3 install --target /python/  --no-cache --no-cache-dir keras
-RUN pip3 install --target /python/  --no-cache --no-cache-dir deepface --no-deps
+
 ADD . /function/
 RUN rm -fr /function/.pip_cache
+
 FROM python:3.8-slim
 WORKDIR /function
 COPY --from=build-stage /python /python
