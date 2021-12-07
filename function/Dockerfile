@@ -1,8 +1,6 @@
 FROM python:3.8 as build-stage
 RUN apt-get update && apt-get install -y cmake clang
 RUN pip install --upgrade pip
- 
-
 WORKDIR /function
 ADD function/requirements.txt /function/
 
@@ -24,5 +22,4 @@ RUN apt-get install ffmpeg libsm6 libxext6  -y
 ENV PYTHONPATH=/function:/python
 ENV DEEPFACE_HOME=/tmp
 ENV HOME=/tmp
-#ENTRYPOINT ["/python/bin/fdk", "/function/func.py", "handler"]
-ENTRYPOINT ["/bin/sh"]
+ENTRYPOINT ["/python/bin/fdk", "/function/func.py", "handler"]
