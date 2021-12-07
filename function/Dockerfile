@@ -2,7 +2,7 @@ FROM python:3.8 as build-stage
 RUN apt-get update && apt-get install -y cmake clang
 RUN pip install --upgrade pip
 WORKDIR /function
-ADD requirements.txt /function/
+ADD function/requirements.txt /function/
 
 			RUN pip3 install --target /python/  --no-cache --no-cache-dir -r requirements.txt &&\
 			    rm -fr ~/.cache/pip /tmp* requirements.txt func.yaml Dockerfile .venv &&\
